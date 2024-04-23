@@ -3,8 +3,9 @@
 This section provides a quick getting started tutorial for Pimcore and covers the following topics: 
 
 1. Installation of Pimcore:
-   - via [Docker](../01_Getting_Started/00_Installation/00_Docker_Based_Installation.md)
-   - via [Webserver](../01_Getting_Started/00_Installation/01_Webserver_Installation.md)
+   - Pimcore Enterprise Edition via [Pimcore PaaS](https://pimcore.com/docs/platform/Paas/)
+   - Pimcore Community Edition via [Docker](../01_Getting_Started/00_Installation/00_Docker_Based_Installation.md)
+   - Pimcore Community Edition via [Webserver](../01_Getting_Started/00_Installation/01_Webserver_Installation.md)
 2. [Advanced Installation Topics](./02_Advanced_Installation_Topics/README.md):
    - [Symfony Messenger and How to Handle Failed Jobs](./02_Advanced_Installation_Topics/01_Symfony_Messenger.md)
 3. [Directory Structure of Pimcore](./03_Directory_Structure.md)
