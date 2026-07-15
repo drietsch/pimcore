@@ -206,8 +206,8 @@ EOT;
     public function getDimensions(?string $path = null, bool $force = false): ?array
     {
         if (!$force) {
-            $width = $this->getCustomSetting('imageWidth');
-            $height = $this->getCustomSetting('imageHeight');
+            $width = (int) $this->getCustomSetting('imageWidth');
+            $height = (int) $this->getCustomSetting('imageHeight');
 
             if ($width && $height && is_numeric($width) && is_numeric($height)) {
                 return [
