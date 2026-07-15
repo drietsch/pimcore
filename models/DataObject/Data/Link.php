@@ -22,6 +22,12 @@ use Pimcore\Model\DataObject\Traits\OwnerAwareFieldTrait;
 use Pimcore\Model\Document;
 use Pimcore\Model\Element\ElementInterface;
 use Pimcore\Model\Element\Service;
+use function htmlspecialchars;
+use function implode;
+use function method_exists;
+use function str_replace;
+use function strlen;
+use function ucfirst;
 
 class Link implements OwnerAwareFieldInterface
 {
@@ -40,21 +46,21 @@ class Link implements OwnerAwareFieldInterface
 
     protected ?string $target = null;
 
-    protected string $parameters = '';
+    protected ?string $parameters = '';
 
-    protected string $anchor = '';
+    protected ?string $anchor = '';
 
-    protected string $title = '';
+    protected ?string $title = '';
 
-    protected string $accesskey = '';
+    protected ?string $accesskey = '';
 
-    protected string $rel = '';
+    protected ?string $rel = '';
 
-    protected string $tabindex = '';
+    protected ?string $tabindex = '';
 
-    protected string $class = '';
+    protected ?string $class = '';
 
-    protected string $attributes = '';
+    protected ?string $attributes = '';
 
     public function getText(): string
     {
@@ -154,7 +160,7 @@ class Link implements OwnerAwareFieldInterface
 
     public function getParameters(): string
     {
-        return $this->parameters;
+        return (string) $this->parameters;
     }
 
     /**
@@ -170,7 +176,7 @@ class Link implements OwnerAwareFieldInterface
 
     public function getAnchor(): string
     {
-        return $this->anchor;
+        return (string) $this->anchor;
     }
 
     /**
@@ -186,7 +192,7 @@ class Link implements OwnerAwareFieldInterface
 
     public function getTitle(): string
     {
-        return $this->title;
+        return (string) $this->title;
     }
 
     /**
@@ -202,7 +208,7 @@ class Link implements OwnerAwareFieldInterface
 
     public function getAccesskey(): string
     {
-        return $this->accesskey;
+        return (string) $this->accesskey;
     }
 
     /**
@@ -218,7 +224,7 @@ class Link implements OwnerAwareFieldInterface
 
     public function getRel(): string
     {
-        return $this->rel;
+        return (string) $this->rel;
     }
 
     /**
@@ -234,7 +240,7 @@ class Link implements OwnerAwareFieldInterface
 
     public function getTabindex(): string
     {
-        return $this->tabindex;
+        return (string) $this->tabindex;
     }
 
     /**
@@ -261,7 +267,7 @@ class Link implements OwnerAwareFieldInterface
 
     public function getAttributes(): string
     {
-        return $this->attributes;
+        return (string) $this->attributes;
     }
 
     /**
@@ -277,7 +283,7 @@ class Link implements OwnerAwareFieldInterface
 
     public function getClass(): string
     {
-        return $this->class;
+        return (string) $this->class;
     }
 
     /**
