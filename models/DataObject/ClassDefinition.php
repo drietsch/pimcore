@@ -46,6 +46,23 @@ final class ClassDefinition extends Model\AbstractModel implements ClassDefiniti
     public ?string $id = null;
 
     /**
+     * Stored, portable identity for this class (version-graph Phase 0′; decisions D5, concept §14.2).
+     *
+     * Minted once, **stored — never derived**, and carried unchanged across export / deploy / import:
+     * adopted on the target, never re-minted. It lives here, on the definition, because the definition
+     * file is what travels between environments; anything kept alongside it can be separated from it.
+     *
+     * This is what `$id` cannot be. `$id` is local: two environments that create the same class
+     * independently mint different ids from `MAX(id)+1` (see save()), which is how one install ends up
+     * with `object_store_5` and another with `object_store_7` for the same class. `$uuid` is the same
+     * everywhere, and — unlike the class name, which is what deployment currently matches on — it
+     * survives a rename, because it travels inside the thing being renamed.
+     *
+     * @internal
+     */
+    public ?string $uuid = null;
+
+    /**
      * @internal
      */
     public ?string $name = null;
@@ -482,6 +499,15 @@ final class ClassDefinition extends Model\AbstractModel implements ClassDefiniti
         return $this->id;
     }
 
+    /**
+     * The stored, portable identity of this class. Null only for classes created before Phase 0′;
+     * `app:vg:class-uuid:mint` backfills those once.
+     */
+    public function getUuid(): ?string
+    {
+        return $this->uuid;
+    }
+
     public function getName(): ?string
     {
         return $this->name;
@@ -513,6 +539,32 @@ final class ClassDefinition extends Model\AbstractModel implements ClassDefiniti
     public function setId(string $id): static
     {
         $this->id = $id;
+
+        return $this;
+    }
+
+    /**
+     * Set the stored identity. Assignable once, then immutable.
+     *
+     * Re-pointing a class's uuid is not an edit — it silently re-parents every commit, every diff and
+     * every audit record that referenced the old value, and nothing downstream can detect it afterwards.
+     * D5 is explicit that identity is "carried unchanged … adopted on the target, never re-minted", so
+     * this refuses rather than resolves. Assigning the *same* value again is a no-op, which is what makes
+     * re-loading a definition file and re-saving it safe.
+     */
+    public function setUuid(?string $uuid): static
+    {
+        if ($uuid !== null && $this->uuid !== null && $this->uuid !== $uuid) {
+            throw new Exception(sprintf(
+                'Refusing to change the uuid of class "%s" from %s to %s: a class identity is minted once '
+                . 'and never re-minted. Changing it silently re-points every commit that referenced it.',
+                $this->name ?? $this->id ?? '?',
+                $this->uuid,
+                $uuid
+            ));
+        }
+
+        $this->uuid = $uuid;
 
         return $this;
     }
