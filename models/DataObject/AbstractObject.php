@@ -444,6 +444,13 @@ abstract class AbstractObject extends Model\Element\AbstractElement
             retryableFunc: function () {
                 $this->doDelete();
                 $this->getDao()->delete();
+                // git-like-pimcore fork hook: an IN-TRANSACTION delete event. Stock Pimcore has no such
+                // seam — PRE_DELETE fires before the transaction opens and POST_DELETE after it commits —
+                // so a tombstone written from either would not be atomic with the deletion. Dispatched
+                // here, while the txn is still open, a subscriber that throws rolls the whole delete back,
+                // which is what makes a co-transactional tombstone possible (version-graph D3). Named with
+                // a distinct string so it cannot be mistaken for an official Pimcore event.
+                $this->dispatchEvent(new DataObjectEvent($this), 'pimcore.dataobject.deleteInTransaction');
             },
             onCommit:function () {
                 //clear parent data from registry
