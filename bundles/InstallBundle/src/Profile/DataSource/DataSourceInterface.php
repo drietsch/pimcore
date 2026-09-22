@@ -13,7 +13,7 @@ declare(strict_types=1);
 
 namespace Pimcore\Bundle\InstallBundle\Profile\DataSource;
 
-use Doctrine\DBAL\Connection;
+use Pimcore\Bundle\InstallBundle\Guardian\RepositorySetup;
 use RuntimeException;
 use Symfony\Component\Console\Output\OutputInterface;
 
@@ -28,11 +28,11 @@ interface DataSourceInterface
      *
      * @throws RuntimeException if the data source cannot be applied
      */
-    public function apply(Connection $connection, OutputInterface $output): void;
+    public function apply(RepositorySetup $repository, OutputInterface $output): void;
 
     /**
      * Whether this data source has already been applied.
      * Used by the installer to avoid re-importing on manual re-runs.
      */
-    public function isApplied(Connection $connection): bool;
+    public function isApplied(RepositorySetup $repository): bool;
 }

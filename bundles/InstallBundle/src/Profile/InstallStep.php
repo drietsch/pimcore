@@ -22,9 +22,6 @@ enum InstallStep: string
     /** Writes collected env vars to .env.local. File operation. */
     case WriteEnv = 'write_env';
 
-    /** Writes doctrine_mapping_types.yaml config. File operation. */
-    case WriteDoctrineConfig = 'write_doctrine_config';
-
     // Phase 2
     /** Boots the real application kernel. Runtime operation. */
     case BootKernel = 'boot_kernel';
@@ -52,9 +49,6 @@ enum InstallStep: string
 
     /** Runs pimcore:deployment:classes-rebuild. File + database + subprocess. Non-fatal. */
     case RebuildClasses = 'rebuild_classes';
-
-    /** Marks all Pimcore migrations as executed. Database + subprocess. Non-fatal. */
-    case MarkMigrations = 'mark_migrations';
 
     /** Executes post-install commands from profile, bundle installers, and CLI providers. Mixed + subprocess. */
     case PostInstallCommands = 'post_install_commands';

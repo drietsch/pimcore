@@ -16,27 +16,24 @@ namespace Pimcore\Bundle\InstallBundle\EnvVarDefinition\Definitions;
 use Pimcore\Bundle\InstallBundle\EnvVarDefinition\MessengerTransportDefinitionInterface;
 
 /**
- * Doctrine-based messenger transport definition.
+ * The messenger transport of this kernel: Guardian jobs (guardian-kernel,
+ * guardian-runner roadmap M5). No user input — the node the plane opens is
+ * the transport, so there is nothing to configure here.
  *
- * Writes PIMCORE_MESSENGER_TRANSPORT_DSN_PREFIX=doctrine://default?queue_name=
- * This is the default transport for all Pimcore messenger queues.
- * No user input is needed — the Doctrine connection is already
- * configured via DATABASE_URL.
- *
- * The trailing ?queue_name= is required because Pimcore appends
- * queue names directly to this value in bundle YAML configs.
+ * The trailing ?queue_name= is required because Pimcore appends queue names
+ * directly to this value in bundle YAML configs.
  */
-final readonly class DoctrineMessengerEnvVarDefinition implements
+final readonly class GuardianMessengerEnvVarDefinition implements
     MessengerTransportDefinitionInterface
 {
     public function getKey(): string
     {
-        return 'messenger-doctrine';
+        return 'messenger-guardian';
     }
 
     public function getLabel(): string
     {
-        return 'Messenger Transport (Doctrine)';
+        return 'Messenger Transport (Guardian jobs)';
     }
 
     public function isRequired(): bool
@@ -57,7 +54,7 @@ final readonly class DoctrineMessengerEnvVarDefinition implements
     public function resolveEnvVars(array $collectedValues): array
     {
         return [
-            'PIMCORE_MESSENGER_TRANSPORT_DSN_PREFIX' => 'doctrine://default?queue_name=',
+            'PIMCORE_MESSENGER_TRANSPORT_DSN_PREFIX' => 'guardian://jobs?queue_name=',
         ];
     }
 

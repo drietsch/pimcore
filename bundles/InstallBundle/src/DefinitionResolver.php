@@ -168,7 +168,7 @@ final class DefinitionResolver
 
         if ($searchEngineCount === 0) {
             $errors[] = 'Profile must include exactly one SearchEngineDefinitionInterface '
-                . 'implementation (e.g., OpenSearchEnvVarDefinition or ElasticsearchEnvVarDefinition).';
+                . 'implementation (e.g., GuardianSearchEnvVarDefinition).';
         } elseif ($searchEngineCount > 1) {
             $errors[] = sprintf(
                 'Profile must include exactly one SearchEngineDefinitionInterface '
@@ -179,8 +179,8 @@ final class DefinitionResolver
 
         if ($messengerTransportCount === 0) {
             $errors[] = 'Profile must include exactly one MessengerTransportDefinitionInterface '
-                . 'implementation (e.g., DoctrineMessengerEnvVarDefinition or '
-                . 'RabbitMqMessengerEnvVarDefinition).';
+                . 'implementation (e.g., GuardianMessengerEnvVarDefinition or '
+                . 'AmqpMessengerEnvVarDefinition).';
         } elseif ($messengerTransportCount > 1) {
             $errors[] = sprintf(
                 'Profile must include exactly one MessengerTransportDefinitionInterface '

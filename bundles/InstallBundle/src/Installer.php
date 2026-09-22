@@ -14,13 +14,12 @@ declare(strict_types=1);
 namespace Pimcore\Bundle\InstallBundle;
 
 use Closure;
-use Doctrine\DBAL\Connection;
 use LogicException;
 use Pimcore;
 use Pimcore\Bundle\InstallBundle\BundleConfig\BundleInstaller;
 use Pimcore\Bundle\InstallBundle\Collector\ParameterCollector;
 use Pimcore\Bundle\InstallBundle\Console\ConsoleCommandRunner;
-use Pimcore\Bundle\InstallBundle\Database\DatabaseSetup;
+use Pimcore\Bundle\InstallBundle\Guardian\RepositorySetup;
 use Pimcore\Bundle\InstallBundle\Env\EnvWriter;
 use Pimcore\Bundle\InstallBundle\EnvVarDefinition\EnvVarDefinitionInterface;
 use Pimcore\Bundle\InstallBundle\EnvVarDefinition\ResolvedDefinition;
@@ -36,6 +35,7 @@ use Pimcore\Bundle\InstallBundle\Profile\PostInstallContext;
 use Pimcore\Bundle\InstallBundle\Profile\PostInstallHookInterface;
 use Pimcore\Config;
 use Psr\Log\LoggerInterface;
+use RuntimeException;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\Dotenv\Dotenv;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
@@ -71,7 +71,7 @@ final class Installer
     public function __construct(
         private readonly LoggerInterface $logger,
         private readonly EventDispatcherInterface $eventDispatcher,
-        private readonly DatabaseSetup $databaseSetup,
+        private readonly RepositorySetup $repositorySetup,
         private readonly DefinitionResolver $definitionResolver,
         private readonly ConsoleCommandRunner $commandRunner,
         private readonly BundleInstaller $bundleInstaller,
@@ -154,7 +154,7 @@ final class Installer
                 return $result['errors'];
             }
 
-            $credentialErrors = $this->databaseSetup->validateAdminCredentials($adminCredentials);
+            $credentialErrors = $this->repositorySetup->validateAdminCredentials($adminCredentials);
             if ($credentialErrors !== []) {
                 return $credentialErrors;
             }
@@ -173,19 +173,11 @@ final class Installer
             $io->text('  <info>✓</info> .env.local written');
         }
 
-        if ($this->isStepSkipped(InstallStep::WriteDoctrineConfig)) {
-            $this->skipStep(InstallStep::WriteDoctrineConfig, 'Writing Doctrine mapping types config...');
-        } else {
-            $this->dispatchStep(InstallStep::WriteDoctrineConfig, 'Writing Doctrine mapping types config...');
-            $this->writeDoctrineConfig($projectRoot);
-            $io->text('  <info>✓</info> Doctrine mapping types config written');
-        }
-
         return [];
     }
 
     /**
-     * Run Phase 2: database setup, bundle install, post-install commands.
+     * Run Phase 2: repository setup, bundle install, post-install commands.
      *
      * Boots the real kernel, performs all installation steps.
      *
@@ -297,15 +289,6 @@ final class Installer
             $this->skipStep(InstallStep::RebuildClasses, 'Rebuilding class definitions...');
         } else {
             $error = $this->executeStepRebuildClasses();
-            if ($error !== null) {
-                $errors[] = $error;
-            }
-        }
-
-        if ($this->isStepSkipped(InstallStep::MarkMigrations)) {
-            $this->skipStep(InstallStep::MarkMigrations, 'Marking migrations as done...');
-        } else {
-            $error = $this->executeStepMarkMigrations();
             if ($error !== null) {
                 $errors[] = $error;
             }
@@ -445,11 +428,6 @@ final class Installer
         );
     }
 
-    private function getDatabaseConnection(KernelInterface $kernel): Connection
-    {
-        return $kernel->getContainer()->get('doctrine.dbal.default_connection');
-    }
-
     /**
      * Resolve env vars from each definition and write to .env.local.
      *
@@ -491,40 +469,6 @@ final class Installer
     }
 
     /**
-     * Write static Doctrine mapping types config.
-     *
-     * Registers database type mappings (e.g. BIT -> boolean)
-     * that Doctrine DBAL does not support natively. Without this config,
-     * introspecting a schema containing these column types throws
-     * "Unknown database type" errors.
-     *
-     * This config was historically part of Pimcore's default.yaml but was
-     * moved to installer-generated config in PR #7848 to avoid container
-     * build failures when no database connection is configured yet.
-     */
-    private function writeDoctrineConfig(string $projectRoot): void
-    {
-        $configDir = $projectRoot . '/config/packages';
-        $filesystem = new Filesystem();
-
-        if (!$filesystem->exists($configDir)) {
-            $filesystem->mkdir($configDir);
-        }
-
-        $content = <<<'YAML'
-doctrine:
-    dbal:
-        connections:
-            default:
-                mapping_types:
-                    bit: boolean
-
-YAML;
-
-        $filesystem->dumpFile($configDir . '/doctrine_mapping_types.yaml', $content);
-    }
-
-    /**
      * Execute a single installation step.
      *
      * Returns null on success, or an error string on failure.
@@ -562,12 +506,17 @@ YAML;
             InstallStep::SetupDatabase,
             'Setting up database...',
             'Schema created',
-            function () use ($kernel, $hasDataSource): void {
-                $db = $this->getDatabaseConnection($kernel);
-                $this->databaseSetup->createSchema($db);
-
+            function () use ($hasDataSource): void {
+                if (!$this->repositorySetup->isReachable()) {
+                    throw new RuntimeException(
+                        'this Pimcore kernel installs into a Guardian repository and is not running on guardian-runner: '
+                        . 'start the installer with `guardian-runner php --guardian <node> vendor/bin/pimcore-install`'
+                    );
+                }
+                // A data source brings its own roots; without one the
+                // installation creates them.
                 if (!$hasDataSource) {
-                    $this->databaseSetup->insertSeedData($db);
+                    $this->repositorySetup->createTreeRoots();
                 }
             },
         );
@@ -587,9 +536,8 @@ YAML;
             InstallStep::ImportData,
             'Importing data...',
             $dataSource->getLabel(),
-            function () use ($dataSource, $kernel, $io): void {
-                $db = $this->getDatabaseConnection($kernel);
-                $this->importDataSource($dataSource, $db, $io);
+            function () use ($dataSource, $io): void {
+                $this->importDataSource($dataSource, $io);
             },
         );
     }
@@ -605,9 +553,8 @@ YAML;
             InstallStep::CreateAdmin,
             'Creating admin user...',
             'Admin user created',
-            function () use ($kernel, $credentials): void {
-                $db = $this->getDatabaseConnection($kernel);
-                $this->databaseSetup->createOrUpdateAdminUser($db, $credentials);
+            function () use ($credentials): void {
+                $this->repositorySetup->createOrUpdateAdminUser($credentials);
             },
         );
     }
@@ -679,19 +626,6 @@ YAML;
         );
     }
 
-    private function executeStepMarkMigrations(): ?string
-    {
-        return $this->executeStep(
-            InstallStep::MarkMigrations,
-            'Marking migrations as done...',
-            'Migrations marked',
-            function (): void {
-                $this->commandRunner->markMigrationsAsDone();
-            },
-            false,
-        );
-    }
-
     /**
      * @param list<PostInstallCommandsProviderInterface> $cliPostInstallProviders
      */
@@ -750,10 +684,8 @@ YAML;
             InstallStep::ProfilePostInstall,
             'Running profile post-install...',
             'Profile postInstall() completed',
-            function () use ($kernel, $profile, $io): void {
-                $db = $this->getDatabaseConnection($kernel);
-                $context = new PostInstallContext($db, $io);
-                $profile->postInstall($context);
+            function () use ($profile, $io): void {
+                $profile->postInstall(new PostInstallContext($this->repositorySetup, $io));
             },
         );
     }
@@ -832,10 +764,9 @@ YAML;
 
     private function importDataSource(
         DataSourceInterface $dataSource,
-        Connection $db,
         SymfonyStyle $io,
     ): void {
-        if ($dataSource->isApplied($db)) {
+        if ($dataSource->isApplied($this->repositorySetup)) {
             $io->text(sprintf(
                 '  Data source "%s" already applied, skipping',
                 $dataSource->getLabel(),
@@ -844,7 +775,7 @@ YAML;
             return;
         }
 
-        $dataSource->apply($db, $io);
+        $dataSource->apply($this->repositorySetup, $io);
         $io->text(sprintf('  <info>✓</info> %s', $dataSource->getLabel()));
     }
 
@@ -897,10 +828,6 @@ YAML;
             $steps++;
         }
 
-        if (!$this->isStepSkipped(InstallStep::WriteDoctrineConfig)) {
-            $steps++;
-        }
-
         $this->totalSteps = $steps;
     }
 
@@ -942,10 +869,6 @@ YAML;
         }
 
         if (!$this->isStepSkipped(InstallStep::RebuildClasses)) {
-            $steps++;
-        }
-
-        if (!$this->isStepSkipped(InstallStep::MarkMigrations)) {
             $steps++;
         }
 

@@ -13,13 +13,13 @@ declare(strict_types=1);
 
 namespace Pimcore\Bundle\InstallBundle\Profile;
 
-use Doctrine\DBAL\Connection;
+use Pimcore\Bundle\InstallBundle\Guardian\RepositorySetup;
 use Symfony\Component\Console\Output\OutputInterface;
 
 final readonly class PostInstallContext
 {
     public function __construct(
-        public Connection $connection,
+        public RepositorySetup $repository,
         public OutputInterface $output,
     ) {
     }

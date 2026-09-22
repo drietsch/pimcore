@@ -95,22 +95,6 @@ final class ConsoleCommandRunner
         );
     }
 
-    public function markMigrationsAsDone(): void
-    {
-        $this->runCommand(
-            ['doctrine:migrations:sync-metadata-storage', '-q'],
-            'Sync migrations metadata storage',
-        );
-
-        $this->runCommand(
-            [
-                'doctrine:migrations:version',
-                '--all', '--add', '--prefix=Pimcore\\Bundle\\CoreBundle', '-n', '-q',
-            ],
-            'Marking all migrations as done',
-        );
-    }
-
     public function runMaintenance(): void
     {
         $this->runCommand(
