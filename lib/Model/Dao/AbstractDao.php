@@ -13,37 +13,49 @@ declare(strict_types=1);
 
 namespace Pimcore\Model\Dao;
 
-use Doctrine\DBAL\Connection;
-use Pimcore\Cache;
-use Pimcore\Cache\RuntimeCache;
-use Pimcore\Db;
+use Pimcore\Guardian\Client;
+use Pimcore\Guardian\NotOnGuardianYet;
 
 abstract class AbstractDao implements DaoInterface
 {
     use DaoTrait;
 
-    const CACHEKEY = 'system_resource_columns_';
-
-    public Connection $db;
+    /**
+     * The kernel's door to Guardian (guardian-kernel): what a Dao persists
+     * through instead of a database connection.
+     */
+    protected Client $guardian;
 
     public function configure(): void
     {
-        $this->db = Db::get();
+        $this->guardian = Client::get();
+    }
+
+    /**
+     * A Dao that still reaches for `$this->db` has not been rewritten onto
+     * Guardian: refuse by name rather than fail on an unknown property.
+     */
+    public function __get(string $name): mixed
+    {
+        if ($name === 'db') {
+            throw NotOnGuardianYet::for(static::class, 'M2', 'this Dao still expects a SQL connection ($this->db)');
+        }
+
+        throw new \Error(sprintf('Undefined property: %s::$%s', static::class, $name));
     }
 
     public function beginTransaction(): void
     {
-        $this->db->beginTransaction();
+        // A unit of work on Guardian is one commit (guardian-runner ADR-0013);
+        // the Daos that batch writes do so through Pimcore\Guardian\UnitOfWork.
     }
 
     public function commit(): void
     {
-        $this->db->commit();
     }
 
     public function rollBack(): void
     {
-        $this->db->rollBack();
     }
 
     /**
@@ -51,7 +63,7 @@ abstract class AbstractDao implements DaoInterface
      */
     public function getPrimaryKey(string $table, bool $cache = true): array
     {
-        return $this->getValidTableColumns($table, $cache, true);
+        throw NotOnGuardianYet::for(static::class . '::getPrimaryKey', 'M2', 'table ' . $table);
     }
 
     /**
@@ -59,45 +71,11 @@ abstract class AbstractDao implements DaoInterface
      */
     public function getValidTableColumns(string $table, bool $cache = true, bool $primaryKeyColumnsOnly = false): array
     {
-        $cacheKey = self::CACHEKEY . $table;
-
-        if (RuntimeCache::isRegistered($cacheKey)) {
-            $allColumns = RuntimeCache::get($cacheKey);
-        } else {
-            $allColumns = Cache::load($cacheKey);
-
-            if (!$allColumns || !$cache) {
-                $columns = [];
-                $primaryKeyColumns = [];
-                $data = $this->db->fetchAllAssociative('SHOW COLUMNS FROM ' . $table);
-                foreach ($data as $d) {
-                    $fieldName = $d['Field'];
-                    $columns[] = $fieldName;
-                    if ($d['Key'] === 'PRI') {
-                        $primaryKeyColumns[] = $fieldName;
-                    }
-                }
-                $allColumns = ['columns' => $columns,  'primaryKeyColumns' => $primaryKeyColumns];
-                Cache::save($allColumns, $cacheKey, ['system', 'resource'], null, 997);
-            }
-
-            RuntimeCache::set($cacheKey, $allColumns);
-        }
-
-        return $primaryKeyColumnsOnly ? $allColumns['primaryKeyColumns'] : $allColumns['columns'];
+        throw NotOnGuardianYet::for(static::class . '::getValidTableColumns', 'M2', 'table ' . $table);
     }
 
-    /**
-     * Clears the column information for the given table.
-     *
-     */
     public function resetValidTableColumnsCache(string $table): void
     {
-        $cacheKey = self::CACHEKEY . $table;
-        if (RuntimeCache::isRegistered($cacheKey)) {
-            RuntimeCache::getInstance()->offsetUnset($cacheKey);
-        }
-        Cache::clearTags(['system', 'resource']);
     }
 
     public static function getForeignKeyName(string $table, string $column): string

@@ -13,34 +13,32 @@ declare(strict_types=1);
 
 namespace Pimcore;
 
-use Doctrine\DBAL\Connection;
-use Pimcore;
+use Pimcore\Guardian\NotOnGuardianYet;
 
+/**
+ * There is no SQL database in this kernel (guardian-kernel, guardian-runner
+ * ADR-0013): persistence is Guardian's. This class stays so that every place
+ * that still asks for a connection refuses by name — the caller shows in the
+ * refusal — instead of failing on a missing class.
+ */
 class Db
 {
-    public static function getConnection(): Connection
+    public static function getConnection(): never
     {
-        return self::get();
+        throw NotOnGuardianYet::sql('Db::getConnection()');
     }
 
-    public static function reset(): Connection
+    public static function reset(): never
     {
-        self::close();
-
-        return self::get();
+        throw NotOnGuardianYet::sql('Db::reset()');
     }
 
-    public static function get(): Connection
+    public static function get(): never
     {
-        /** @var Connection $db */
-        $db = Pimcore::getContainer()->get('doctrine.dbal.default_connection');
-
-        return $db;
+        throw NotOnGuardianYet::sql('Db::get()');
     }
 
     public static function close(): void
     {
-        $db = Pimcore::getContainer()->get('doctrine.dbal.default_connection');
-        $db->close();
     }
 }

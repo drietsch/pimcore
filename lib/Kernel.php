@@ -13,8 +13,6 @@ declare(strict_types=1);
 
 namespace Pimcore;
 
-use Doctrine\Bundle\DoctrineBundle\DoctrineBundle;
-use Doctrine\Bundle\MigrationsBundle\DoctrineMigrationsBundle;
 use FOS\JsRoutingBundle\FOSJsRoutingBundle;
 use Knp\Bundle\PaginatorBundle\KnpPaginatorBundle;
 use League\FlysystemBundle\FlysystemBundle;
@@ -277,8 +275,6 @@ abstract class Kernel extends SymfonyKernel
             new TwigBundle(),
             new TwigExtraBundle(),
             new MonologBundle(),
-            new DoctrineBundle(),
-            new DoctrineMigrationsBundle(),
             new CmfRoutingBundle(),
             new SchebTwoFactorBundle(),
             new FOSJsRoutingBundle(),

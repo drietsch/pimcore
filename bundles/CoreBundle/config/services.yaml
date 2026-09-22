@@ -128,10 +128,12 @@ services:
         tags:
             - { name: controller.argument_value_resolver, priority: 101}
 
+    # Locks are node-scoped in this kernel (guardian-kernel): Guardian has no
+    # lock primitive by design and the PHP plane runs on one node.
     Symfony\Component\Lock\PersistingStoreInterface:
-        class: Symfony\Component\Lock\Store\DoctrineDbalStore
+        class: Symfony\Component\Lock\Store\FlockStore
         arguments:
-            - '@doctrine.dbal.default_connection'
+            - '%kernel.cache_dir%/../pimcore-locks'
 
     Symfony\Component\Lock\LockFactory:
         public: true
@@ -146,9 +148,7 @@ services:
         arguments:
             $locator: !tagged_locator { tag: flysystem.storage }
 
-    Pimcore\Asset\StorageQueue\StorageOperationQueueRepository:
-        arguments:
-            - '@doctrine.dbal.default_connection'
+    Pimcore\Asset\StorageQueue\StorageOperationQueueRepository: ~
 
     Pimcore\Asset\StorageQueue\StorageOperationQueueRepositoryInterface:
         alias: Pimcore\Asset\StorageQueue\StorageOperationQueueRepository
@@ -265,15 +265,6 @@ services:
         arguments:
             $instanceIdentifier: '%pimcore.product_registration.instance_identifier%'
             $config: '%pimcore.config%'
-
-    # Doctrine schema filter to only include managed tables
-    Pimcore\Db\ManagedTablesOnlyFilter.default:
-        class: Pimcore\Db\ManagedTablesOnlyFilter
-        arguments:
-            $registry: '@doctrine'
-            $commandContextHolder: '@Pimcore\Console\CommandContextHolder'
-        tags:
-            - { name: doctrine.dbal.schema_filter, connection: default }
 
     pimcore.calculated_value.expression_language:
         class: Pimcore\Helper\SymfonyExpression\CalculatedFieldExpressionLanguage

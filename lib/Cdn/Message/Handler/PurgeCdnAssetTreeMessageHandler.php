@@ -13,12 +13,10 @@ declare(strict_types=1);
 
 namespace Pimcore\Cdn\Message\Handler;
 
-use Doctrine\DBAL\Connection;
 use Pimcore\Cdn\AssetWebPath;
 use Pimcore\Cdn\CdnAssetTag;
 use Pimcore\Cdn\Message\PurgeCdnAssetTreeMessage;
 use Pimcore\Cdn\PurgeClientInterface;
-use Pimcore\Db\Helper;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
@@ -42,7 +40,6 @@ class PurgeCdnAssetTreeMessageHandler
         private readonly PurgeClientInterface $purgeClient,
         private readonly CdnAssetTag $assetTag,
         private readonly AssetWebPath $assetWebPath,
-        private readonly Connection $db,
         #[Autowire('%pimcore.cdn.base_url%')]
         private readonly string $cdnBaseUrl = '',
     ) {
@@ -92,9 +89,8 @@ class PurgeCdnAssetTreeMessageHandler
      */
     protected function loadDescendants(string $folderPath): iterable
     {
-        return $this->db->iterateAssociative(
-            "SELECT id, CONCAT(`path`, filename) AS fullPath FROM assets WHERE `path` LIKE ? AND `type` != 'folder'",
-            [Helper::escapeLike($folderPath) . '/%'],
-        );
+        // The asset tree lives in Guardian (guardian-kernel): a descendants
+        // listing over `element.query` lands with the asset Daos (roadmap M4).
+        throw \Pimcore\Guardian\NotOnGuardianYet::for(self::class . '::loadDescendants', 'M4', 'asset descendants of ' . $folderPath);
     }
 }

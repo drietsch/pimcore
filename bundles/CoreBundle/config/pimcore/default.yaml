@@ -1,6 +1,8 @@
 parameters:
     locale: en
-    env(PIMCORE_MESSENGER_TRANSPORT_DSN_PREFIX): 'doctrine://default?queue_name='
+    # Guardian jobs carry Pimcore's messages (guardian-kernel, roadmap M5); until
+    # then the transport refuses by name (Pimcore\Guardian\Messenger).
+    env(PIMCORE_MESSENGER_TRANSPORT_DSN_PREFIX): 'guardian://jobs?queue_name='
     pimcore.messenger.transport_dsn_prefix: '%env(resolve:PIMCORE_MESSENGER_TRANSPORT_DSN_PREFIX)%'
     env(PIMCORE_ENCRYPTION_SECRET): ''
     env(PIMCORE_INSTANCE_IDENTIFIER): ''
@@ -152,24 +154,6 @@ twig:
         editmode: false
     paths:
         '%kernel.project_dir%/templates': App
-
-# Doctrine Configuration
-doctrine:
-    dbal:
-        default_connection: default
-        connections:
-            default:
-                url: '%env(resolve:DATABASE_URL)%'
-                driver: pdo_mysql
-                charset: UTF8MB4
-                logging: false
-                profiling: false
-                options:
-                  !php/const PDO::MYSQL_ATTR_INIT_COMMAND: "SET sql_mode = '';"
-                default_table_options:
-                    charset: UTF8MB4
-                    engine: InnoDB
-                    collate: utf8mb4_unicode_520_ci
 
 # Monolog Configuration
 monolog:

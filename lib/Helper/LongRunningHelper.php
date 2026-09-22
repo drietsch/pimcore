@@ -13,10 +13,6 @@ declare(strict_types=1);
 
 namespace Pimcore\Helper;
 
-use Doctrine\DBAL\Connection;
-use Doctrine\Persistence\ConnectionRegistry;
-use Exception;
-use LogicException;
 use Monolog\Handler\HandlerInterface;
 use Pimcore\Cache\RuntimeCache;
 use Psr\Log\LoggerAwareTrait;
@@ -24,8 +20,6 @@ use Psr\Log\LoggerAwareTrait;
 final class LongRunningHelper
 {
     use LoggerAwareTrait;
-
-    protected ConnectionRegistry $connectionRegistry;
 
     /**
      * @var string[]
@@ -46,37 +40,11 @@ final class LongRunningHelper
      */
     protected array $tmpFilePaths = [];
 
-    /**
-     * LongRunningHelper constructor.
-     *
-     */
-    public function __construct(ConnectionRegistry $connectionRegistry)
-    {
-        $this->connectionRegistry = $connectionRegistry;
-    }
-
     public function cleanUp(array $options = []): void
     {
-        $this->cleanupDoctrine();
         $this->cleanupMonolog();
         $this->cleanupPimcoreRuntimeCache($options);
         $this->triggerPhpGarbageCollector();
-    }
-
-    protected function cleanupDoctrine(): void
-    {
-        try {
-            foreach ($this->connectionRegistry->getConnections() as $name => $connection) {
-                if (!($connection instanceof Connection)) {
-                    throw new LogicException('Expected only instances of Connection');
-                }
-                if ($connection->isTransactionActive() === false) {
-                    $connection->close();
-                }
-            }
-        } catch (Exception $e) {
-            // connection couldn't be established, this is e.g. the case when Pimcore isn't installed yet
-        }
     }
 
     protected function triggerPhpGarbageCollector(): void

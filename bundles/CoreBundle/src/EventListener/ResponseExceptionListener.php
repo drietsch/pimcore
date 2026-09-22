@@ -13,7 +13,6 @@ declare(strict_types=1);
 
 namespace Pimcore\Bundle\CoreBundle\EventListener;
 
-use Doctrine\DBAL\Connection;
 use Exception;
 use Pimcore;
 use Pimcore\Bundle\CoreBundle\EventListener\Traits\PimcoreContextAwareTrait;
@@ -42,7 +41,6 @@ class ResponseExceptionListener implements EventSubscriberInterface
 
     public function __construct(
         protected DocumentRendererInterface $documentRenderer,
-        protected Connection $db,
         protected SystemSettingsConfig $config,
         protected Document\Service $documentService,
         protected SiteResolver $siteResolver

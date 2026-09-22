@@ -13,17 +13,12 @@ declare(strict_types=1);
 
 namespace Pimcore\Console;
 
-use Doctrine\Migrations\Tools\Console\Command\DoctrineCommand;
 use Pimcore;
 use Pimcore\Event\System\ConsoleEvent;
 use Pimcore\Event\SystemEvents;
-use Pimcore\Migrations\FilteredMigrationsRepository;
-use Pimcore\Migrations\FilteredTableMetadataStorage;
 use Pimcore\Tool\MaintenanceModeHelperInterface;
 use Pimcore\Version;
 use RuntimeException;
-use Symfony\Component\Console\Command\Command;
-use Symfony\Component\Console\Command\LazyCommand;
 use Symfony\Component\Console\ConsoleEvents;
 use Symfony\Component\Console\Event\ConsoleCommandEvent;
 use Symfony\Component\Console\Event\ConsoleTerminateEvent;
@@ -99,13 +94,6 @@ final class Application extends \Symfony\Bundle\FrameworkBundle\Console\Applicat
 
                 $maintenanceModeHelper->activate($maintenanceModeId);
             }
-
-            if ($event->getCommand() instanceof DoctrineCommand &&
-                $prefix = $event->getInput()->getOption('prefix')
-            ) {
-                $kernel->getContainer()->get(FilteredMigrationsRepository::class)->setPrefix($prefix);
-                $kernel->getContainer()->get(FilteredTableMetadataStorage::class)->setPrefix($prefix);
-            }
         });
 
         $dispatcher->addListener(ConsoleEvents::TERMINATE, function (ConsoleTerminateEvent $event) use ($kernel) {
@@ -131,24 +119,4 @@ final class Application extends \Symfony\Bundle\FrameworkBundle\Console\Applicat
         return $inputDefinition;
     }
 
-    public function add(Command $command): ?Command
-    {
-        if ($command instanceof LazyCommand && str_starts_with($command->getName(), 'doctrine:')) {
-            $command = $command->getCommand();
-        }
-
-        if (str_starts_with($command->getName(), 'doctrine:') || $command instanceof DoctrineCommand) {
-            $definition = $command->getDefinition();
-
-            // add filter option
-            $definition->addOption(new InputOption(
-                'prefix',
-                null,
-                InputOption::VALUE_OPTIONAL,
-                'Optional prefix filter for version classes, eg. Pimcore\Bundle\CoreBundle\Migrations'
-            ));
-        }
-
-        return parent::add($command);
-    }
 }
